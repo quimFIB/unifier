@@ -15,12 +15,16 @@ module Term =
 end
 
 let t1 = Term.Term ("f",[Var "a"])
-let t2 = Term.Term ("f",[Var "b"])
+let t2 = Term.Term ("g",[Var "b"])
 let t3 = Term.Term ("f",[Var "c"])
+
 
 module Unifier =
   struct
     type equality = Equal of Term.term * Term.term
+    type t = equality
+    let str (eq : equality) = match eq with Equal (t1,t2) -> Term.str t1 ^ "=" ^ Term.str t2
+    let compare (eq1 : equality) (eq2 : equality) = compare eq1  eq2
     let reflex (eq : equality) = match eq with Equal (t1,t2) -> Equal (t2,t1)
     let sub (equal : equality) (t : Term.term) : Term.term =
       match equal with
@@ -31,4 +35,15 @@ module Unifier =
       | _ -> false
 end
 
-module Theory = Set.Make(Unifier.equality)
+module EqSet = Set.Make(Unifier)
+let pretty_print t = List.fold_left (fun x y -> x ^ y) "" (List.map (fun x -> (Unifier.str x) ^ ";") (EqSet.elements t))
+
+let eq1 = Unifier.Equal (t1, t2)
+let eq2 = Unifier.Equal (t2, t2)
+let eq3 = Unifier.Equal (t3, t1)
+let foo = EqSet.(empty |> add eq1 |> add eq2 |> add eq3)
+
+(* "Pretty" print the EqSet elements *)
+(* List.fold_left (fun x y -> x ^ y) "" (List.map Unifier.str (EqSet.elements foo)) *)
+
+(* List.fold_left (fun x y -> x ^ y) "" (List.map (fun x -> (Unifier.str x) ^ ";") (EqSet.elements foo)) *)

@@ -1,23 +1,22 @@
 (* A small OCaml program *)
 print_string "Hello World!\n"
 
-(* type atom = Atom of String.t *)
 module Term =
   struct
     type term =
-      | Atom of string
+      | Var of string
       | Term of string * term list
 
     let rec str (t : term) = match t with
-      | Atom s -> s
+      | Var s -> s
       | Term (s,l) -> s ^ "(" ^ (String.concat "," (List.map str l)) ^ ")"
     (* let rec sub (a : term) (sub : term) (t : term) = true *)
-    (* let rec sub (Atom a) (sub : term) (t : term) = true *)
+    (* let rec sub (Var a) (sub : term) (t : term) = true *)
 end
 
-let t1 = Term.Term ("f",[Atom "a"])
-let t2 = Term.Term ("f",[Atom "b"])
-let t3 = Term.Term ("f",[Atom "c"])
+let t1 = Term.Term ("f",[Var "a"])
+let t2 = Term.Term ("f",[Var "b"])
+let t3 = Term.Term ("f",[Var "c"])
 
 module Unifier =
   struct
@@ -26,4 +25,10 @@ module Unifier =
     let sub (equal : equality) (t : Term.term) : Term.term =
       match equal with
       | Equal (t_l,t_r) -> if t_l = t then t_r else t
+    let occurs (v : Term.term) (t : Term.term) = (v = t)
+    let conflict (t1: Term.term) (t2: Term.term) = match t1, t2 with
+      | Term (f,l1), Term (g,l2) -> (f <> g) or (List.length l1 <> List.length l2)
+      | _ -> false
 end
+
+module Theory = Set.Make(Unifier.equality)

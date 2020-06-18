@@ -33,26 +33,42 @@ module Unifier =
       | Equal (t_l,t_r) -> if t_l = t then t_r else match t with
                                                     | Term (f,l) -> Term (f, List.map (sub equal) l)
                                                     | _ -> t
-    let rec occurs (v : Term.term) (t : Term.term) = if (v = t) then true
-                                                     else match t with
-                                                          | Term (f, l) -> List.exists (occurs v) l
-                                                          | Var y -> false
+    let rec occurs (t : Term.term) (v : Term.term) = match v,t with
+      | Var x, Term (f, l) -> List.exists (occurs v) l
+      | _,_ -> false
     let conflict (t1: Term.term) (t2: Term.term) = match t1, t2 with
       | Term (f,l1), Term (g,l2) -> (f <> g) or (List.length l1 <> List.length l2)
       | _ -> false
-    let decompose (eq: equality) = match eq with Equal (t1,t2) -> match t1,t2 with
-                                                                  | Term (f, l_f), Term (g, l_g) -> if (f = g) & (List.length l_f = List.length l_g) then
-                                                                                                      true
-                                                                                                    else
-                                                                                                      false
-                                                                  | _,_ -> true
-end
+    let decomposable (eq: equality) = match eq with Equal (t1,t2) ->
+                                                     match t1,t2 with
+                                                     | Term (f, l_f), Term (g, l_g) ->
+                                                        if (f = g) & (List.length l_f = List.length l_g) then
+                                                          true
+                                                        else
+                                                          false
+                                                     | _,_ -> false
+
+    let decompose (eq: equality) = match eq with Equal (t1,t2) ->
+                                                  match t1,t2 with
+                                                  | Term (f, l_f), Term (g, l_g) -> List.rev_map2 (fun x y -> Equal (x,y)) l_f l_g
+                                                  | _,_ -> []
+  end
 
 module EqSet = Set.Make(Unifier)
+type uniSet = {vars : Term.term list; eqSet : EqSet.t;}
 module Unify =
   struct
     let eliminate (eq : Unifier.equality) (eqSet : EqSet.t) = match eq with
       | Equal (t1, t2) -> EqSet.(map (fun x -> match x with Equal (t1,t2) -> Equal (Unifier.sub eq t1,Unifier.sub eq t2)) eqSet |> EqSet.add eq)
+    let unify (eqSet : EqSet.t) = let eq0 = EqSet.choose eqSet in
+                                  match eq0 with
+                                    Equal (t1,t2) -> match t1, t2 with
+                                                     | Term (f, l), Var x -> EqSet.(remove eq0 eqSet |> add (Unifier.reflex eq0))
+                                                     (* | Var x, Term (f, l) -> EqSet.(map (Unifier.sub t2) eqSet |> ) *)
+                                                     | _,_ -> if t1 = t2 then EqSet.remove eq0 eqSet
+                                                              else if Unifier.decomposable eq0 then EqSet.(remove eq0 eqSet |> union (of_list (Unifier.decompose eq0)))
+                                                              else if Unifier.occurs t1 t2 then EqSet.empty (*we have to fail so return empty set for the time being*)
+                                                              else eqSet
   end
 let pretty_print t = List.fold_left (fun x y -> x ^ y) "" (List.map (fun x -> (Unifier.str x) ^ ";") (EqSet.elements t))
 

@@ -6,7 +6,8 @@ module Term =
     type term =
       | Var of string
       | Term of string * term list
-
+    type t = term
+    let compare (t1 : term) (t2 : term) = compare t1 t2
     let rec str (t : term) = match t with
       | Var s -> s
       | Term (s,l) -> s ^ "(" ^ (String.concat "," (List.map str l)) ^ ")"
@@ -21,6 +22,8 @@ let t4 = Term.Term ("z",[Var "a"])
 let t5 = Term.Term ("w",[Var "c"])
 
 
+module VarSet = Set.Make(Term)
+module VarIntMap = Map.Make(Term)
 module Unifier =
   struct
     type equality = Equal of Term.term * Term.term
@@ -52,15 +55,28 @@ module Unifier =
                                                   match t1,t2 with
                                                   | Term (f, l_f), Term (g, l_g) -> List.rev_map2 (fun x y -> Equal (x,y)) l_f l_g
                                                   | _,_ -> []
+    let rec getVarsTerm (t : Term.term) = match t with
+      | Var x -> VarSet.(empty |> add (Var x))
+      | Term (f, l)-> List.fold_left VarSet.union VarSet.empty (List.map getVarsTerm l)
+
+    let getVarsEq (eq : equality) = match eq with Equal (t1,t2) -> VarSet.union (getVarsTerm t1) (getVarsTerm t2)
   end
 
 module EqSet = Set.Make(Unifier)
-type uniSet = {vars : Term.term list; eqSet : EqSet.t;}
+module UniSet =
+  struct
+    type t = {vars : VarSet.t; eqSet : EqSet.t;}
+    let add (eq : Unifier.equality) {vars : VarSet.t; eqSet : EqSet.t;} = {vars = VarSet.union vars (Unifier.getVarsEq eq); eqSet = EqSet.add eq eqSet}
+    (* let remove (eq : Unifier.equality) {vars : VarSet.t; eqSet : EqSet.t;} = {vars = VarSet.di} *)
+
+
+  end
 module Unify =
   struct
+  include UniSet
     let eliminate (eq : Unifier.equality) (eqSet : EqSet.t) = match eq with
       | Equal (t1, t2) -> EqSet.(map (fun x -> match x with Equal (t1,t2) -> Equal (Unifier.sub eq t1,Unifier.sub eq t2)) eqSet |> EqSet.add eq)
-    let unify (eqSet : EqSet.t) = let eq0 = EqSet.choose eqSet in
+    let unify {vars : VarSet.t;  eqSet : EqSet.t} = let eq0 = EqSet.choose eqSet in
                                   match eq0 with
                                     Equal (t1,t2) -> match t1, t2 with
                                                      | Term (f, l), Var x -> EqSet.(remove eq0 eqSet |> add (Unifier.reflex eq0))

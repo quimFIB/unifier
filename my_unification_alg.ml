@@ -28,7 +28,30 @@ let t4 = Term.(`Term ("z",[`Var "a"]))
 let t5 = Term.(`Term ("w",[`Var "c"]))
 
 
-module VarSet = Set.Make(Var)
+module VarMultiSet =
+  struct
+    module VarMap = Map.Make(Var)
+    module VarSet = Set.Make(Var)
+    include VarMap
+    open Var
+    type map = int VarMap.t
+    type base = {vars : VarSet.t; var_count: map}
+    type t = base
+    let add (v : var) {vars : VarSet.t; var_count: map} = let new_vars = VarSet.add v vars
+                                                          and new_var_count = VarMap.update v (fun m -> match m with
+                                                                                                        | Some y -> Some (y+1)
+                                                                                                        | None -> Some 1) var_count  in
+                                   {vars = new_vars; var_count = new_var_count}
+    let remove(v : var) {vars : VarSet.t; var_count: map} = let new_vars = VarSet.add v vars
+                                                            and new_var_count = VarMap.update v (fun m -> match m with
+                                                                                                        | Some 1 -> None
+                                                                                                        | Some y -> Some (y-1)
+                                                                                                        | None -> Some 1) var_count  in
+                                   {vars = new_vars; var_count = new_var_count}
+    let union (vms1 : base) (vms2: base) = {vars = VarSet.union vms1.vars vms2.vars; var_count = VarMap.union (fun k x y -> Some (x+y)) vms1.var_count vms2.var_count }
+    let empty = {vars = VarSet.empty; var_count = VarMap.empty}
+  end
+
 module VarIntMap = Map.Make(Term)
 module Unifier =
   struct
@@ -62,18 +85,21 @@ module Unifier =
                                                   | `Term (f, l_f), `Term (g, l_g) -> List.rev_map2 (fun x y -> Equal (x,y)) l_f l_g
                                                   | _,_ -> []
     let rec getVarsTerm (t : Term.term) = match t with
-      | `Var x -> VarSet.(empty |> add (`Var x))
-      | `Term (f, l)-> List.fold_left VarSet.union VarSet.empty (List.map getVarsTerm l)
+      | `Var x -> VarMultiSet.(empty |> add (`Var x))
+      | `Term (f, l)-> List.fold_left VarMultiSet.union VarMultiSet.empty (List.map getVarsTerm l)
 
-    let getVarsEq (eq : equality) = match eq with Equal (t1,t2) -> VarSet.union (getVarsTerm t1) (getVarsTerm t2)
+    let getVarsEq (eq : equality) = match eq with Equal (t1,t2) -> VarMultiSet.union (getVarsTerm t1) (getVarsTerm t2)
   end
 
 module EqSet = Set.Make(Unifier)
 module UniSet =
   struct
-    type t = {vars : VarSet.t; eqSet : EqSet.t;}
-    let add (eq : Unifier.equality) {vars : VarSet.t; eqSet : EqSet.t;} = {vars = VarSet.union vars (Unifier.getVarsEq eq); eqSet = EqSet.add eq eqSet}
-    (* let remove (eq : Unifier.equality) {vars : VarSet.t; eqSet : EqSet.t;} = {vars = VarSet.di} *)
+    type t = {vSet : VarMultiSet.t; eqSet : EqSet.t;}
+    let add (eq : Unifier.equality) (uniSet : t) = let found = EqSet.find_opt eq uniSet.eqSet in
+                            match found with None -> {vSet = VarMultiSet.union uniSet.vSet (Unifier.getVarsEq eq); eqSet = EqSet.add eq uniSet.eqSet} | _ -> uniSet
+    (* TODO: remove equality from set *)
+    (* let remove (eq : Unifier.equality) (uniSet : t) = let found = EqSet.find_opt eq uniSet.eqSet in
+     *                            match found with None -> uniSet | Some eq0 -> let vars = Unifier.getVarsEq eq0 in  *)
 
 
   end
@@ -82,15 +108,15 @@ module Unify =
   include UniSet
     let eliminate (eq : Unifier.equality) (eqSet : EqSet.t) = match eq with
       | Equal (t1, t2) -> EqSet.(map (fun x -> match x with Equal (t1,t2) -> Equal (Unifier.sub eq t1,Unifier.sub eq t2)) eqSet |> EqSet.add eq)
-    let unify {vars : VarSet.t;  eqSet : EqSet.t} = let eq0 = EqSet.choose eqSet in
+    let unify (set : UniSet.t) = let eq0 = EqSet.choose set.eqSet in
                                   match eq0 with
                                     Equal (t1,t2) -> match t1, t2 with
-                                                     | `Term (f, l), `Var x -> EqSet.(remove eq0 eqSet |> add (Unifier.reflex eq0))
+                                                     | `Term (f, l), `Var x -> EqSet.(remove eq0 set.eqSet |> add (Unifier.reflex eq0))
                                                      | `Var x, `Term (f, l) -> if Unifier.occurs (`Var x) t2 then EqSet.empty
-                                                                               else eqSet
-                                                     | _,_ -> if t1 = t2 then EqSet.remove eq0 eqSet
-                                                              else if Unifier.decomposable eq0 then EqSet.(remove eq0 eqSet |> union (of_list (Unifier.decompose eq0)))
-                                                              else eqSet
+                                                                               else set.eqSet
+                                                     | _,_ -> if t1 = t2 then EqSet.remove eq0 set.eqSet
+                                                              else if Unifier.decomposable eq0 then EqSet.(remove eq0 set.eqSet |> union (of_list (Unifier.decompose eq0)))
+                                                              else set.eqSet
   end
 let pretty_print t = List.fold_left (fun x y -> x ^ y) "" (List.map (fun x -> (Unifier.str x) ^ ";") (EqSet.elements t))
 

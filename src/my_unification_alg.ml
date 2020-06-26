@@ -26,50 +26,10 @@ let t2 = Term.(`Term ("g",[`Var "b"]))
 let t3 = Term.(`Term ("f",[`Var "c"]))
 let t4 = Term.(`Term ("z",[`Var "a"]))
 let t5 = Term.(`Term ("w",[`Var "c"]))
-(* module OrderedPair (E : Set.OrderedType) =
- *   sig
- *    type t = E.t * int
- *    val compare : t -> t -> bool
- *   end *)
-module OrderedPair (E : Set.OrderedType) =
-  struct
-   type t = E.t * int
-   let compare (x:t) (y:t) = match x,y with (x0, nX), (y0, nY) -> E.compare x0 y0
-  end
-module MultiSet (O : Set.OrderedType) =
-  struct
-    module SetPair = OrderedPair(O)
-    module Mset = Set.Make(SetPair)
-    include Mset
-    let add (x : O.t) (s : Mset.t) = let found = Mset.find_opt (x,0) s in
-                   match found with None -> Mset.add (x,1) s | Some (x,c) -> Mset.add (x,c+1) s
-    let remove (x : O.t) (s : Mset.t) = let found = Mset.find_opt (x,0) s in
-                 match found with None -> s | Some (x,c) -> if c > 1 then Mset.(remove (x,c) s |> add (x,c-1))
-                                                            else Mset.remove (x,c) s
-  end
-module MSet (O : Set.OrderedType) =
-  struct
-    module Mmap = Map.Make(O)
-    module MSet_ = Set.Make(O)
-    open Mmap
-    type map = int Mmap.t
-    type t = {elems : MSet_.t; counters : map}
-    let add (v : O.t) {elems : MSet_.t; counters: map} = let new_elems = MSet_.add v elems
-                                                          and new_counters = Mmap.update v (fun m -> match m with
-                                                                                                        | Some y -> Some (y+1)
-                                                                                                        | None -> Some 1) counters  in
-                                   {elems = new_elems; counters = new_counters}
-    let remove(v : O.t) {elems : MSet_.t; counters: map} = let new_elems = MSet_.add v elems
-                                                            and new_counters = Mmap.update v (fun m -> match m with
-                                                                                                        | Some 1 -> None
-                                                                                                        | Some y -> Some (y-1)
-                                                                                                        | None -> Some 1) counters  in
-                                   {elems = new_elems; counters = new_counters}
-    let union (vms1 : t) (vms2: t) = {elems = MSet_.union vms1.elems vms2.elems; counters = Mmap.union (fun k x y -> Some (x+y)) vms1.counters vms2.counters }
-    let empty = {elems = MSet_.empty; counters = Mmap.empty}
-  end
 
-module VarMSet = MSet(Var)
+open MultiSet
+
+module VarMSet = MultiSet(Var)
 module Unifier =
   struct
     type equality = Equal of Term.term * Term.term

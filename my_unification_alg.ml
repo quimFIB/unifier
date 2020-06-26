@@ -26,33 +26,50 @@ let t2 = Term.(`Term ("g",[`Var "b"]))
 let t3 = Term.(`Term ("f",[`Var "c"]))
 let t4 = Term.(`Term ("z",[`Var "a"]))
 let t5 = Term.(`Term ("w",[`Var "c"]))
-
-
-module VarMultiSet =
+(* module OrderedPair (E : Set.OrderedType) =
+ *   sig
+ *    type t = E.t * int
+ *    val compare : t -> t -> bool
+ *   end *)
+module OrderedPair (E : Set.OrderedType) =
   struct
-    module VarMap = Map.Make(Var)
-    module VarSet = Set.Make(Var)
-    include VarMap
-    open Var
-    type map = int VarMap.t
-    type base = {vars : VarSet.t; var_count: map}
-    type t = base
-    let add (v : var) {vars : VarSet.t; var_count: map} = let new_vars = VarSet.add v vars
-                                                          and new_var_count = VarMap.update v (fun m -> match m with
+   type t = E.t * int
+   let compare (x:t) (y:t) = match x,y with (x0, nX), (y0, nY) -> E.compare x0 y0
+  end
+module MultiSet (O : Set.OrderedType) =
+  struct
+    module SetPair = OrderedPair(O)
+    module Mset = Set.Make(SetPair)
+    include Mset
+    let add (x : O.t) (s : Mset.t) = let found = Mset.find_opt (x,0) s in
+                   match found with None -> Mset.add (x,1) s | Some (x,c) -> Mset.add (x,c+1) s
+    let remove (x : O.t) (s : Mset.t) = let found = Mset.find_opt (x,0) s in
+                 match found with None -> s | Some (x,c) -> if c > 1 then Mset.(remove (x,c) s |> add (x,c-1))
+                                                            else Mset.remove (x,c) s
+  end
+module MSet (O : Set.OrderedType) =
+  struct
+    module Mmap = Map.Make(O)
+    module MSet_ = Set.Make(O)
+    open Mmap
+    type map = int Mmap.t
+    type t = {elems : MSet_.t; counters : map}
+    let add (v : O.t) {elems : MSet_.t; counters: map} = let new_elems = MSet_.add v elems
+                                                          and new_counters = Mmap.update v (fun m -> match m with
                                                                                                         | Some y -> Some (y+1)
-                                                                                                        | None -> Some 1) var_count  in
-                                   {vars = new_vars; var_count = new_var_count}
-    let remove(v : var) {vars : VarSet.t; var_count: map} = let new_vars = VarSet.add v vars
-                                                            and new_var_count = VarMap.update v (fun m -> match m with
+                                                                                                        | None -> Some 1) counters  in
+                                   {elems = new_elems; counters = new_counters}
+    let remove(v : O.t) {elems : MSet_.t; counters: map} = let new_elems = MSet_.add v elems
+                                                            and new_counters = Mmap.update v (fun m -> match m with
                                                                                                         | Some 1 -> None
                                                                                                         | Some y -> Some (y-1)
-                                                                                                        | None -> Some 1) var_count  in
-                                   {vars = new_vars; var_count = new_var_count}
-    let union (vms1 : base) (vms2: base) = {vars = VarSet.union vms1.vars vms2.vars; var_count = VarMap.union (fun k x y -> Some (x+y)) vms1.var_count vms2.var_count }
-    let empty = {vars = VarSet.empty; var_count = VarMap.empty}
+                                                                                                        | None -> Some 1) counters  in
+                                   {elems = new_elems; counters = new_counters}
+    let union (vms1 : t) (vms2: t) = {elems = MSet_.union vms1.elems vms2.elems; counters = Mmap.union (fun k x y -> Some (x+y)) vms1.counters vms2.counters }
+    let empty = {elems = MSet_.empty; counters = Mmap.empty}
   end
 
-module VarIntMap = Map.Make(Term)
+module VarMSet = MSet(Var)
 module Unifier =
   struct
     type equality = Equal of Term.term * Term.term
@@ -69,12 +86,12 @@ module Unifier =
       | `Term (f, l) -> List.exists (occurs v) l
       | _ -> t = (v :> Term.term)
     let conflict (t1: Term.term) (t2: Term.term) = match t1, t2 with
-      | `Term (f,l1), `Term (g,l2) -> (f <> g) or (List.length l1 <> List.length l2)
+      | `Term (f,l1), `Term (g,l2) -> (f <> g) || (List.length l1 <> List.length l2)
       | _ -> false
     let decomposable (eq: equality) = match eq with Equal (t1,t2) ->
                                                      match t1,t2 with
                                                      | `Term (f, l_f), `Term (g, l_g) ->
-                                                        if (f = g) & (List.length l_f = List.length l_g) then
+                                                        if (f = g) && (List.length l_f = List.length l_g) then
                                                           true
                                                         else
                                                           false
@@ -85,18 +102,18 @@ module Unifier =
                                                   | `Term (f, l_f), `Term (g, l_g) -> List.rev_map2 (fun x y -> Equal (x,y)) l_f l_g
                                                   | _,_ -> []
     let rec getVarsTerm (t : Term.term) = match t with
-      | `Var x -> VarMultiSet.(empty |> add (`Var x))
-      | `Term (f, l)-> List.fold_left VarMultiSet.union VarMultiSet.empty (List.map getVarsTerm l)
+      | `Var x -> VarMSet.(empty |> add (`Var x))
+      | `Term (f, l)-> List.fold_left VarMSet.union VarMSet.empty (List.map getVarsTerm l)
 
-    let getVarsEq (eq : equality) = match eq with Equal (t1,t2) -> VarMultiSet.union (getVarsTerm t1) (getVarsTerm t2)
+    let getVarsEq (eq : equality) = match eq with Equal (t1,t2) -> VarMSet.union (getVarsTerm t1) (getVarsTerm t2)
   end
 
 module EqSet = Set.Make(Unifier)
 module UniSet =
   struct
-    type t = {vSet : VarMultiSet.t; eqSet : EqSet.t;}
+    type t = {vSet : VarMSet.t; eqSet : EqSet.t;}
     let add (eq : Unifier.equality) (uniSet : t) = let found = EqSet.find_opt eq uniSet.eqSet in
-                            match found with None -> {vSet = VarMultiSet.union uniSet.vSet (Unifier.getVarsEq eq); eqSet = EqSet.add eq uniSet.eqSet} | _ -> uniSet
+                            match found with None -> {vSet = VarMSet.union uniSet.vSet (Unifier.getVarsEq eq); eqSet = EqSet.add eq uniSet.eqSet} | _ -> uniSet
     (* TODO: remove equality from set *)
     (* let remove (eq : Unifier.equality) (uniSet : t) = let found = EqSet.find_opt eq uniSet.eqSet in
      *                            match found with None -> uniSet | Some eq0 -> let vars = Unifier.getVarsEq eq0 in  *)

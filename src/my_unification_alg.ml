@@ -75,9 +75,9 @@ module UniSet =
     let add (eq : Unifier.equality) (uniSet : t) = let found = EqSet.find_opt eq uniSet.eqSet in
                             match found with None -> {vSet = VarMSet.union uniSet.vSet (Unifier.getVarsEq eq); eqSet = EqSet.add eq uniSet.eqSet} | _ -> uniSet
     (* TODO: remove equality from set *)
-    (* let remove (eq : Unifier.equality) (uniSet : t) = let found = EqSet.find_opt eq uniSet.eqSet in
-     *                            match found with None -> uniSet | Some eq0 -> let vars = Unifier.getVarsEq eq0 in  *)
-
+    let remove (eq : Unifier.equality) (uniSet : t) = let found = EqSet.find_opt eq uniSet.eqSet in
+                               match found with None -> uniSet | Some eq0 -> let vars = Unifier.getVarsEq eq0 in
+                                                      {vSet = VarMSet.diff uniSet.vSet vars ; eqSet = EqSet.remove eq0 uniSet.eqSet}
 
   end
 module Unify =

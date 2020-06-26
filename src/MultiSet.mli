@@ -59,7 +59,6 @@ module MultiSet :
       val union : t -> t -> t
       val inter : t -> t -> t
       val disjoint : t -> t -> bool
-      val diff : t -> t -> t
       val compare : t -> t -> int
       val equal : t -> t -> bool
       val subset : t -> t -> bool
@@ -92,6 +91,8 @@ module MultiSet :
       val of_seq : elt Seq.t -> t
       val add : O.t -> Mset.t -> Mset.t
       val remove : O.t -> Mset.t -> Mset.t
+      val decrease : SetPair.t -> Mset.t -> Mset.t
+      val diff : Mset.t -> Mset.t -> Mset.t
     end
 module StrMSet :
   sig
@@ -151,7 +152,6 @@ module StrMSet :
     val union : t -> t -> t
     val inter : t -> t -> t
     val disjoint : t -> t -> bool
-    val diff : t -> t -> t
     val compare : t -> t -> int
     val equal : t -> t -> bool
     val subset : t -> t -> bool
@@ -184,5 +184,8 @@ module StrMSet :
     val of_seq : elt Seq.t -> t
     val add : String.t -> Mset.t -> Mset.t
     val remove : String.t -> Mset.t -> Mset.t
+    val decrease : SetPair.t -> Mset.t -> Mset.t
+    val diff : Mset.t -> Mset.t -> Mset.t
   end
 val m : StrMSet.Mset.t
+val n : StrMSet.Mset.t

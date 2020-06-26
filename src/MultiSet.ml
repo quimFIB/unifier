@@ -14,6 +14,10 @@ module MultiSet (O : Set.OrderedType) =
     let remove (x : O.t) (s : Mset.t) = let found = Mset.find_opt (x,0) s in
                  match found with None -> s | Some (x,c) -> if c > 1 then Mset.(remove (x,c) s |> add (x,c-1))
                                                             else Mset.remove (x,c) s
+    let decrease ((x,k) : SetPair.t) (s : Mset.t) = let found = Mset.find_opt (x,k) s in
+                 match found with None -> s | Some (y,c) -> if c > k then Mset.(remove (y,c) s |> add (x,c-k))
+                                                            else Mset.remove (y,c) s
+    let diff (s0 : Mset.t) (s1 : Mset.t) = Seq.fold_left (fun s x -> decrease x s) s0 (Mset.to_seq s1)
   end
 
 
@@ -42,3 +46,4 @@ module MultiSet (O : Set.OrderedType) =
 (* TESTS *)
 module StrMSet = MultiSet(String)
 let m = StrMSet.(empty |> add "a" |> add "b" |> add "a")
+let n = StrMSet.(empty |> add "a")

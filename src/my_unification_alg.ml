@@ -27,9 +27,13 @@ let t3 = Term.(`Term ("f",[`Var "c"]))
 let t4 = Term.(`Term ("z",[`Var "a"]))
 let t5 = Term.(`Term ("w",[`Var "c"]))
 
+(* Need to comment this to load into utop and ...*)
 open MultiSet
+module VarMSet = MultiSet.Make(Var)
 
-module VarMSet = MultiSet(Var)
+(* uncomment this *)
+(* module VarMSet = Make(Var) *)
+
 module Unifier =
   struct
     type equality = Equal of Term.term * Term.term
@@ -80,8 +84,10 @@ module UniSet =
                                                       {vSet = VarMSet.diff uniSet.vSet vars ; eqSet = EqSet.remove eq0 uniSet.eqSet}
     let contains (x : Var.var) (uniSet: t) = VarMSet.mem (x,0) uniSet.vSet
     let empty = {vSet = VarMSet.empty; eqSet = EqSet.empty}
-    (* let substitute (eq_sub : Unifier.equality) (uniSet: t) = match eq_sub with Equal (){vSet = VarMSet.remove x uniSet.vSet; eqSet = EqSet.map (fun eq -> match eq with Equal (t1,t2) -> Equal (Unifier.sub eq_sub t1, Unifier.sub eq_sub t2)) uniSet.eqSet} *)
-
+    let substitute (eq_sub : Unifier.equality) (uniSet: t) = match eq_sub with
+      | Equal (`Var x,t) -> {vSet = VarMSet.remove (`Var x) uniSet.vSet; eqSet = EqSet.map (fun eq -> match eq with Equal (t1,t2) -> Equal (Unifier.sub eq_sub t1, Unifier.sub eq_sub t2)) uniSet.eqSet}
+      | _ -> failwith "Invalid equation substitution, must be of the form Var = Term"
+    let from_set (s : EqSet.t) = Seq.fold_left (fun s x -> add x s) empty (EqSet.to_seq s)
   end
 module Unify =
   struct
@@ -99,7 +105,7 @@ module Unify =
                                                      | `Term (f, l), `Var x -> (UniSet.(remove eq0 set|> add (Unifier.reflex eq0)),EqSet.(remove eq0 set.eqSet |> add (Unifier.reflex eq0))) (*flip or swap*)
                                                      | `Var x, `Term (f, l)  -> let contains = UniSet.contains (`Var x) set
                                                                                 and occurs = (Unifier.occurs (`Var x) (`Term (f, l))) in
-                                                         if  contains && not occurs then (set, EqSet.remove eq0 candidates)
+                                                         if  contains && not occurs then (UniSet.substitute eq0 set, EqSet.remove eq0 candidates)
                                                          else if not contains then (set, EqSet.remove eq0 candidates)
                                                          else (UniSet.empty, EqSet.empty)
                                                      | _,_ -> if t1 = t2 then (UniSet.remove eq0 set, EqSet.remove eq0 candidates) (* Delete rule *)
@@ -116,7 +122,14 @@ let eq3 = Unifier.Equal (t3, t1)
 let eq4 = Unifier.Equal (t3, t4)
 let eq5 = Unifier.Equal (t1, t5)
 let eqSub = Unifier.Equal (`Var "c", `Term ("y", [`Var "c0"; `Var "c1"]))
-let foo = EqSet.(empty |> add eq1 |> add eq2 |> add eq3 |> add eq4 |> add eq5)
+
+let failing = EqSet.(empty |> add eq1 |> add eq2 |> add eq3 |> add eq4 |> add eq5)
+let failing_uni = UniSet.from_set failing
+
+let foo = EqSet.(empty |> add eq2 |> add eq3)
+let foo_uni = UniSet.from_set foo
+let (unif_result, candidates_result) = Unify.unify (foo_uni,foo)
+
 
 (* "Pretty" print the EqSet elements *)
 (* List.fold_left (fun x y -> x ^ y) "" (List.map Unifier.str (EqSet.elements foo)) *)

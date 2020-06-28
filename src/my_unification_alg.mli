@@ -70,7 +70,6 @@ module VarMSet :
     val is_empty : t -> bool
     val mem : elt -> t -> bool
     val singleton : elt -> t
-    val union : t -> t -> t
     val inter : t -> t -> t
     val disjoint : t -> t -> bool
     val compare : t -> t -> int
@@ -106,7 +105,9 @@ module VarMSet :
     val add : Var.t -> Mset.t -> Mset.t
     val remove : Var.t -> Mset.t -> Mset.t
     val decrease : SetPair.t -> Mset.t -> Mset.t
+    val increase : SetPair.t -> Mset.t -> Mset.t
     val diff : Mset.t -> Mset.t -> Mset.t
+    val union : Mset.t -> Mset.t -> Mset.t
   end
 module Unifier :
   sig
@@ -121,7 +122,7 @@ module Unifier :
     val decomposable : equality -> bool
     val decompose : equality -> equality list
     val getVarsTerm : Term.term -> VarMSet.Mset.t
-    val getVarsEq : equality -> VarMSet.t
+    val getVarsEq : equality -> VarMSet.Mset.t
   end
 module EqSet :
   sig
@@ -172,15 +173,27 @@ module UniSet :
   sig
     type t = { vSet : VarMSet.t; eqSet : EqSet.t; }
     val add : Unifier.equality -> t -> t
+    val add_from_list : Unifier.equality list -> t -> t
     val remove : Unifier.equality -> t -> t
+    val contains : Var.var -> t -> bool
+    val empty : t
+    val substitute : Unifier.equality -> t -> t
+    val from_set : EqSet.t -> t
   end
 module Unify :
   sig
     type t = UniSet.t = { vSet : VarMSet.t; eqSet : EqSet.t; }
     val add : Unifier.equality -> t -> t
+    val add_from_list : Unifier.equality list -> t -> t
     val remove : Unifier.equality -> t -> t
+    val contains : Var.var -> t -> bool
+    val empty : t
+    val substitute : Unifier.equality -> t -> t
+    val from_set : EqSet.t -> t
     val eliminate : Unifier.equality -> EqSet.t -> EqSet.t
-    val unify : UniSet.t -> EqSet.t
+    val occurs_rec : Unifier.equality -> bool
+    val conflict : Unifier.equality -> bool
+    val unify : t * EqSet.t -> UniSet.t * EqSet.t
   end
 val pretty_print : EqSet.t -> string
 val eq1 : Unifier.equality
@@ -190,3 +203,6 @@ val eq4 : Unifier.equality
 val eq5 : Unifier.equality
 val eqSub : Unifier.equality
 val foo : EqSet.t
+val foo_uni : UniSet.t
+val vars_result : UniSet.t
+val eqs_result : EqSet.t

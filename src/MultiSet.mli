@@ -1,7 +1,7 @@
 module OrderedPair :
   functor (E : Set.OrderedType) ->
     sig type t = E.t * int val compare : t -> t -> int end
-module MultiSet :
+module Make :
   functor (O : Set.OrderedType) ->
     sig
       module SetPair : sig type t = O.t * int val compare : t -> t -> int end
@@ -56,7 +56,6 @@ module MultiSet :
       val is_empty : t -> bool
       val mem : elt -> t -> bool
       val singleton : elt -> t
-      val union : t -> t -> t
       val inter : t -> t -> t
       val disjoint : t -> t -> bool
       val compare : t -> t -> int
@@ -92,7 +91,9 @@ module MultiSet :
       val add : O.t -> Mset.t -> Mset.t
       val remove : O.t -> Mset.t -> Mset.t
       val decrease : SetPair.t -> Mset.t -> Mset.t
+      val increase : SetPair.t -> Mset.t -> Mset.t
       val diff : Mset.t -> Mset.t -> Mset.t
+      val union : Mset.t -> Mset.t -> Mset.t
     end
 module StrMSet :
   sig
@@ -149,7 +150,6 @@ module StrMSet :
     val is_empty : t -> bool
     val mem : elt -> t -> bool
     val singleton : elt -> t
-    val union : t -> t -> t
     val inter : t -> t -> t
     val disjoint : t -> t -> bool
     val compare : t -> t -> int
@@ -185,7 +185,8 @@ module StrMSet :
     val add : String.t -> Mset.t -> Mset.t
     val remove : String.t -> Mset.t -> Mset.t
     val decrease : SetPair.t -> Mset.t -> Mset.t
+    val increase : SetPair.t -> Mset.t -> Mset.t
     val diff : Mset.t -> Mset.t -> Mset.t
+    val union : Mset.t -> Mset.t -> Mset.t
   end
-val m : StrMSet.Mset.t
-val n : StrMSet.Mset.t
+module Test : sig val m : StrMSet.Mset.t val n : StrMSet.Mset.t end

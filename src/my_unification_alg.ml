@@ -113,6 +113,7 @@ module Unify =
                                                               else if Unifier.decomposable eq0 then
                                                                 let new_eqs_list = Unifier.decompose eq0 in (UniSet.add_from_list new_eqs_list set, EqSet.union (EqSet.of_list new_eqs_list) candidates)
                                                               else (UniSet.empty, EqSet.empty)
+(* TODO: Iterate unify to actually unify terms *)
   end
 let pretty_print t = List.fold_left (fun x y -> x ^ y) "" (List.map (fun x -> (Unifier.str x) ^ ";") (EqSet.elements t))
 

@@ -5,7 +5,12 @@ So, good luck and have fun, I guess.
 
 Interesting info
 
+```
 .mli :   ocamlc -i     x.ml > x.mli
+
 .cmi :   ocamlc        x.mli
+
 .cmo :   ocamlc -c     x.ml
+
 .cmx :   ocamlopt -c   x.ml
+```

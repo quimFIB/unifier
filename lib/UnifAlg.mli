@@ -172,8 +172,10 @@ module EqSet :
 module UniSet :
   sig
     type t = { vSet : VarMSet.t; eqSet : EqSet.t; }
+    val union : t -> t -> t
     val add : Unifier.equality -> t -> t
     val add_from_list : Unifier.equality list -> t -> t
+    val add_from_seq : Unifier.equality Seq.t -> t -> t
     val remove : Unifier.equality -> t -> t
     val contains : Var.var -> t -> bool
     val empty : t
@@ -183,8 +185,10 @@ module UniSet :
 module Unify :
   sig
     type t = UniSet.t = { vSet : VarMSet.t; eqSet : EqSet.t; }
+    val union : t -> t -> t
     val add : Unifier.equality -> t -> t
     val add_from_list : Unifier.equality list -> t -> t
+    val add_from_seq : Unifier.equality Seq.t -> t -> t
     val remove : Unifier.equality -> t -> t
     val contains : Var.var -> t -> bool
     val empty : t
@@ -193,16 +197,7 @@ module Unify :
     val eliminate : Unifier.equality -> EqSet.t -> EqSet.t
     val occurs_rec : Unifier.equality -> bool
     val conflict : Unifier.equality -> bool
-    val unify : t * EqSet.t -> UniSet.t * EqSet.t
+    val unify_step : t * EqSet.t -> UniSet.t * EqSet.t
+    val unify : t * EqSet.t -> t * EqSet.t
   end
 val pretty_print : EqSet.t -> string
-val eq1 : Unifier.equality
-val eq2 : Unifier.equality
-val eq3 : Unifier.equality
-val eq4 : Unifier.equality
-val eq5 : Unifier.equality
-val eqSub : Unifier.equality
-val foo : EqSet.t
-val foo_uni : UniSet.t
-val vars_result : UniSet.t
-val eqs_result : EqSet.t

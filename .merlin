@@ -1,3 +1,5 @@
 PRJ unifier
+S lib
 S src
 B _build/src
+B _build/lib

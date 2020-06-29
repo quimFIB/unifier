@@ -21,12 +21,6 @@ module Term =
     (* let rec sub (`Var a) (sub : term) (t : term) = true *)
 end
 
-let t1 = Term.(`Term ("f",[`Var "a"]))
-let t2 = Term.(`Term ("g",[`Var "b"]))
-let t3 = Term.(`Term ("f",[`Var "c"]))
-let t4 = Term.(`Term ("z",[`Var "a"]))
-let t5 = Term.(`Term ("w",[`Var "c"]))
-
 (* Need to comment this to load into utop and ...*)
 open MultiSet
 module VarMSet = MultiSet.Make(Var)

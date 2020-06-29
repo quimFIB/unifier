@@ -1,5 +1,11 @@
 open UnifAlg
 
+let t1 = Term.(`Term ("f",[`Var "a"]))
+let t2 = Term.(`Term ("g",[`Var "b"]))
+let t3 = Term.(`Term ("f",[`Var "c"]))
+let t4 = Term.(`Term ("z",[`Var "a"]))
+let t5 = Term.(`Term ("w",[`Var "c"]))
+
 let eq1 = Unifier.Equal (t1, t2)
 let eq2 = Unifier.Equal (t2, t2)
 let eq3 = Unifier.Equal (t3, t1)

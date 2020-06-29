@@ -11,11 +11,6 @@ module Term :
     val compare : term -> term -> int
     val str : term -> string
   end
-val t1 : [> `Term of string * [> `Var of string ] list ]
-val t2 : [> `Term of string * [> `Var of string ] list ]
-val t3 : [> `Term of string * [> `Var of string ] list ]
-val t4 : [> `Term of string * [> `Var of string ] list ]
-val t5 : [> `Term of string * [> `Var of string ] list ]
 module VarMSet :
   sig
     module SetPair : sig type t = Var.t * int val compare : t -> t -> int end

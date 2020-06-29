@@ -25,7 +25,10 @@ let (unif_0, candidates_0) = Unify.unify_step (foo_uni,foo)
 let (unif_1, candidates_1) = Unify.unify_step (unif_0,candidates_0)
 let (unif_result, candidates_result) = Unify.unify (foo_uni,foo)
 
+let main() = let representation = List.fold_left (fun x y -> x ^ y) "" (List.map (fun x -> (Unifier.str x) ^ ";") (show_unif unif_result)) in
+        print_string ("{" ^ (String.sub representation 0 ((String.length representation)-1)) ^ "}");
+        print_newline ();;
 (* "Pretty" print the EqSet elements *)
 (* List.fold_left (fun x y -> x ^ y) "" (List.map Unifier.str (EqSet.elements foo)) *)
 
-(* List.fold_left (fun x y -> x ^ y) "" (List.map (fun x -> (Unifier.str x) ^ ";") (EqSet.elements foo)) *)
+let () = main ()

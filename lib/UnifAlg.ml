@@ -95,6 +95,22 @@ module UniSet =
 module Unify =
   struct
   include UniSet
+    type case = Var2Var | Term2Var | Var2Term | Term2Term
+    let case_str (c : case) = match c with
+                              | Var2Var -> "Var2Var"
+                              | Term2Var -> "Term2Var"
+                              | Var2Term -> "Var2Term"
+                              | Term2Term -> "Term2Term"
+    type unifyStep = Del | Flip | Fail | Substitute | Decompose | Eliminate
+    type log = Log of unifyStep * Unifier.equality * case
+    let log_str (log : log) = match log with
+                              | Log (Del, eq, c) -> "[Del;" ^ Unifier.str eq ^ "; " ^ case_str c ^ "]"
+                              | Log (Flip, eq, c) -> "[Flip;" ^ Unifier.str eq ^ "; " ^ case_str c ^ "]"
+                              | Log (Fail, eq, c) -> "[Fail;" ^ Unifier.str eq ^ "; " ^ case_str c ^ "]"
+                              | Log (Substitute, eq, c) -> "[Substitute;" ^ Unifier.str eq ^ "; " ^ case_str c ^ "]"
+                              | Log (Decompose, eq, c) -> "[Decompose;" ^ Unifier.str eq ^ "; " ^ case_str c ^ "]"
+                              | Log (Eliminate, eq, c) -> "[Eliminate;" ^ Unifier.str eq ^ "; " ^ case_str c ^ "]"
+
     let eliminate (eq : Unifier.equality) (eqSet : EqSet.t) = match eq with
       | Equal (t1, t2) -> EqSet.(map (fun x -> match x with Equal (t1,t2) -> Equal (Unifier.sub eq t1,Unifier.sub eq t2)) eqSet |> EqSet.add eq)
     (*occur check. If given equality of the form x = f(s0,...,sk) checking that for all si, x =/= si*)
@@ -102,25 +118,29 @@ module Unify =
                                                                           | `Var x, `Term (f, l) -> Unifier.occurs (`Var x) t2
                                                                           | _, _ -> false
     let conflict (eq : Unifier.equality) = match eq with Equal (t1,t2) -> Unifier.conflict t1 t2
-    let unify_step (set, candidates) : UniSet.t * EqSet.t = let eq0 = EqSet.choose candidates in
-                                  match eq0 with
-                                    Equal (t1,t2) -> match t1, t2 with
-                                                     | `Var x, `Var y -> let new_candidates = EqSet.remove eq0 candidates
-                                                                         and delta = UniSet.substitute eq0 set in
-                                                                        (UniSet.union set delta, EqSet.union new_candidates delta.eqSet)
-                                                     | `Term (f, l), `Var x -> (UniSet.(remove eq0 set|> add (Unifier.reflex eq0)),EqSet.(remove eq0 set.eqSet |> add (Unifier.reflex eq0))) (*flip or swap*)
-                                                     | `Var x, `Term (f, l)  -> let contains = UniSet.contains (`Var x) set
-                                                                                and occurs = (Unifier.occurs (`Var x) (`Term (f, l))) in
-                                                         if  contains && not occurs then (UniSet.union set (UniSet.substitute eq0 set), EqSet.remove eq0 candidates)
-                                                         else if not contains then (set, EqSet.remove eq0 candidates)
-                                                         else (UniSet.empty, EqSet.empty)
-                                                     | _,_ -> if t1 = t2 then (UniSet.remove eq0 set, EqSet.remove eq0 candidates) (* Delete rule *)
-                                                              (* Decompose rule *)
-                                                              else if Unifier.decomposable eq0 then
-                                                                let new_eqs_list = Unifier.decompose eq0 in (UniSet.add_from_list new_eqs_list (UniSet.remove eq0 set), EqSet.(remove eq0 candidates |> union (EqSet.of_list new_eqs_list)))
-                                                              else (UniSet.empty, EqSet.empty)
-    let rec unify(set, candidates) : UniSet.t * EqSet.t = if EqSet.is_empty candidates then (set, candidates)
-                                                          else unify(unify_step (set,candidates))
+    let unify_step ((set, candidates, log) : UniSet.t * EqSet.t * log list) = let eq0 = EqSet.choose candidates in
+                                                     match eq0 with
+                                                       Equal (t1,t2) -> match t1, t2 with
+                                                                        | `Var x, `Var y -> let new_candidates = EqSet.remove eq0 candidates
+                                                                                            and delta = UniSet.substitute eq0 set in
+                                                                     (UniSet.union set delta, EqSet.union new_candidates delta.eqSet, List.cons (Log (Substitute, eq0, Var2Var)) log)
+                                                                        | `Term (f, l), `Var x -> (UniSet.(remove eq0 set|> add (Unifier.reflex eq0)),EqSet.(remove eq0 set.eqSet |> add (Unifier.reflex eq0)),
+                                                                                                   List.cons (Log (Flip, eq0, Term2Var)) log) (*flip or swap*)
+                                                                        | `Var x, `Term (f, l)  -> let contains = UniSet.contains (`Var x) set
+                                                                                                   and occurs = (Unifier.occurs (`Var x) (`Term (f, l))) in
+                                                                            if  contains && not occurs then (UniSet.union set (UniSet.substitute eq0 set), EqSet.remove eq0 candidates, List.cons (Log (Eliminate, eq0, Var2Term)) log)
+                                                                            else if not contains then (set, EqSet.remove eq0 candidates, List.cons (Log (Del, eq0, Var2Term)) log)
+                                                                            else (UniSet.empty, EqSet.empty, List.cons (Log (Fail, eq0, Var2Term)) log)
+                                                                        | _,_ -> if t1 = t2 then (UniSet.remove eq0 set, EqSet.remove eq0 candidates, List.cons (Log (Del, eq0, Term2Term)) log) (* Delete rule *)
+                                                                                  (* Decompose rule *)
+                                                                                 else if Unifier.decomposable eq0 then
+                                                                                   let new_eqs_list = Unifier.decompose eq0 in (UniSet.add_from_list new_eqs_list (UniSet.remove eq0 set),
+                                                                                                                                EqSet.(remove eq0 candidates |> union (EqSet.of_list new_eqs_list)),
+                                                                                                                                List.cons (Log (Decompose, eq0, Term2Term)) log)
+                                                                                 else (UniSet.empty, EqSet.empty, List.cons (Log (Fail, eq0, Term2Term)) log)
+    let rec unify_loop ((set, candidates, log) : UniSet.t * EqSet.t * log list)  = if EqSet.is_empty candidates then (set, candidates, log)
+                                                                                  else unify_loop(unify_step (set,candidates,log))
+    let unify ((set, candidates) : UniSet.t * EqSet.t) = unify_loop (set, candidates, [])
   end
-let pretty_print t = List.fold_left (fun x y -> x ^ y) "" (List.map (fun x -> (Unifier.str x) ^ ";") (EqSet.elements t))
 
+(* let pretty_print t = List.fold_left (fun x y -> x ^ y) "" (List.map (fun x -> (Unifier.str x) ^ ";") (EqSet.elements t)) *)

@@ -189,10 +189,17 @@ module Unify :
     val empty : t
     val substitute : Unifier.equality -> t -> t
     val from_set : EqSet.t -> t
+    type case = Var2Var | Term2Var | Var2Term | Term2Term
+    val case_str : case -> string
+    type unifyStep = Del | Flip | Fail | Substitute | Decompose | Eliminate
+    type log = Log of unifyStep * Unifier.equality * case
+    val log_str : log -> string
     val eliminate : Unifier.equality -> EqSet.t -> EqSet.t
     val occurs_rec : Unifier.equality -> bool
     val conflict : Unifier.equality -> bool
-    val unify_step : t * EqSet.t -> UniSet.t * EqSet.t
-    val unify : t * EqSet.t -> t * EqSet.t
+    val unify_step :
+      UniSet.t * EqSet.t * log list -> UniSet.t * EqSet.t * log list
+    val unify_loop :
+      UniSet.t * EqSet.t * log list -> UniSet.t * EqSet.t * log list
+    val unify : UniSet.t * EqSet.t -> UniSet.t * EqSet.t * log list
   end
-val pretty_print : EqSet.t -> string

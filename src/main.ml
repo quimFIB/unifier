@@ -7,17 +7,20 @@ let t4 = Term.(`Term ("z",[`Var "a"]))
 let t5 = Term.(`Term ("w",[`Var "c"]))
 
 (* Test #1 *)
-let constC = Term.(`Term ("C",[]))
-let constK = Term.(`Term ("K",[]))
+(* let constC = Term.(`Term ("C",[]))
+ * let constK = Term.(`Term ("K",[])) *)
+let constC = Term.(`Var "C")
+let constK = Term.(`Var "K")
 let g_of_cx = Term.(`Term ("g", [constC; `Var "x"]))
 let f_of_g_of_cx = Term.(`Term ("f", [g_of_cx]))
-
+let h_of_z = Term.(`Term ("h", [`Var "z"]))
+let g_of_h_of_z_k = Term.(`Term ("g", [h_of_z; constK]))
 let h_of_yk = Term.(`Term ("h", [`Var "y"; constK]))
-let f_of_h_of_yk = Term.(`Term ("f", [h_of_yk]))
+let f_of_g_of_yk = Term.(`Term ("f", [g_of_h_of_z_k]))
 
 let initSet (s : EqSet.t) = (UniSet.from_set s, s)
 
-let eq1_test1 = Unifier.Equal (f_of_g_of_cx,f_of_h_of_yk)
+let eq1_test1 = Unifier.Equal (f_of_g_of_cx, f_of_g_of_yk)
 let start_test_1 = EqSet.(empty |> add eq1_test1)
 let (unif_test1, candidates_test1, log_test1) = Unify.unify (initSet start_test_1)
 

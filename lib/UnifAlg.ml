@@ -1,4 +1,4 @@
-(* Robinson Unification Algorithm *)
+(* NOT Robinson's Unification Algorithm *)
 module Var =
   struct
     type var = [`Var of string]
@@ -66,7 +66,18 @@ module Unifier =
     let getVarsEq (eq : equality) = match eq with Equal (t1,t2) -> VarMSet.union (getVarsTerm t1) (getVarsTerm t2)
   end
 
-module EqSet = Set.Make(Unifier)
+module EqSet =
+  struct
+    include Set.Make(Unifier)
+    let substitute (eq_sub : Unifier.equality) (eqSet: t) = match eq_sub with
+      (* | Unifier.Equal (`Var x, `Var y) -> eqSet *)
+      | Unifier.Equal (`Var x,t) -> let modSeq = Seq.map (fun eq -> match eq with
+                                                                    | Unifier.Equal (`Var x,`Var y) -> (eq, false)
+                                                                    | Unifier.Equal (t1,t2) -> let new_eq = Unifier.Equal (Unifier.sub eq_sub t1, Unifier.sub eq_sub t2) in
+                                                                        if eq = new_eq then (eq, false) else (new_eq,true)) (to_seq eqSet) in
+            Seq.fold_left (fun s x -> add x s) empty (Seq.map (fun (x,b) -> x) modSeq)
+      | _ -> failwith "Invalid equation substitution, must be of the form Var = Term"
+  end
 module UniSet =
   struct
     open Unifier
@@ -83,12 +94,13 @@ module UniSet =
     let empty = {vSet = VarMSet.empty; eqSet = EqSet.empty}
     let substitute (eq_sub : Unifier.equality) (uniSet: t) = match eq_sub with
       (* | Equal (`Var x, `Var y) -> uniSet *)
-      | Equal (`Var x,t) -> let modifications = Seq.filter_map (fun eq -> match eq with
-                                                                     | Equal (`Var x,`Var y) -> None
+      | Equal (`Var x,t) -> let modifications = Seq.map (fun eq -> match eq with
+                                                                     | Equal (`Var x,`Var y) -> (eq,false)
                                                                      | Equal (t1,t2) -> let new_eq = Equal (Unifier.sub eq_sub t1, Unifier.sub eq_sub t2) in
-                                                                 if eq = new_eq then None else Some new_eq) (EqSet.to_seq uniSet.eqSet) in
-     add_from_seq modifications empty
-
+                                                                 if eq = new_eq then (eq,false) else (new_eq,true)) (EqSet.to_seq uniSet.eqSet) in
+     (* let updated_eqs = Seq.filter (fun (x,modified) -> modified) modifications in *)
+     {vSet = Seq.fold_left (fun s s' -> VarMSet.union s s') uniSet.vSet (Seq.filter_map (fun (x,modified) -> let new_vars = getVarsTerm t in if modified then Some new_vars else None) modifications);
+     eqSet = EqSet.substitute eq_sub uniSet.eqSet}
       | _ -> failwith "Invalid equation substitution, must be of the form Var = Term"
     let from_set (s : EqSet.t) = Seq.fold_left (fun s x -> add x s) empty (EqSet.to_seq s)
   end
@@ -121,14 +133,13 @@ module Unify =
     let unify_step ((set, candidates, log) : UniSet.t * EqSet.t * log list) = let eq0 = EqSet.choose candidates in
                                                      match eq0 with
                                                        Equal (t1,t2) -> match t1, t2 with
-                                                                        | `Var x, `Var y -> let new_candidates = EqSet.remove eq0 candidates
-                                                                                            and delta = UniSet.substitute eq0 set in
-                                                                     (UniSet.union set delta, EqSet.union new_candidates delta.eqSet, List.cons (Log (Substitute, eq0, Var2Var)) log)
+                                                                        | `Var x, `Var y -> (UniSet.substitute eq0 set, EqSet.remove eq0 candidates, List.cons (Log (Substitute, eq0, Var2Var)) log)
                                                                         | `Term (f, l), `Var x -> (UniSet.(remove eq0 set|> add (Unifier.reflex eq0)),EqSet.(remove eq0 set.eqSet |> add (Unifier.reflex eq0)),
                                                                                                    List.cons (Log (Flip, eq0, Term2Var)) log) (*flip or swap*)
                                                                         | `Var x, `Term (f, l)  -> let contains = UniSet.contains (`Var x) set
                                                                                                    and occurs = (Unifier.occurs (`Var x) (`Term (f, l))) in
-                                                                            if  contains && not occurs then (UniSet.union set (UniSet.substitute eq0 set), EqSet.remove eq0 candidates, List.cons (Log (Eliminate, eq0, Var2Term)) log)
+                                                                            if  contains && not occurs then let subs_set = UniSet.substitute eq0 (UniSet.remove eq0 set) in
+                                                                                                            (UniSet.add eq0 subs_set, EqSet.remove eq0 candidates, List.cons (Log (Eliminate, eq0, Var2Term)) log)
                                                                             else if not contains then (set, EqSet.remove eq0 candidates, List.cons (Log (Del, eq0, Var2Term)) log)
                                                                             else (UniSet.empty, EqSet.empty, List.cons (Log (Fail, eq0, Var2Term)) log)
                                                                         | _,_ -> if t1 = t2 then (UniSet.remove eq0 set, EqSet.remove eq0 candidates, List.cons (Log (Del, eq0, Term2Term)) log) (* Delete rule *)

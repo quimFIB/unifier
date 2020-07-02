@@ -44,13 +44,23 @@ let foo_uni = UniSet.from_set foo
 let show_unif (unif : UniSet.t) = EqSet.elements unif.eqSet
 let show_candidates (candidates : EqSet.t ) = EqSet.elements candidates
 
-let (unif_0, candidates_0, log_0) = Unify.unify_step (foo_uni,foo, [])
-let (unif_1, candidates_1, log_1) = Unify.unify_step (unif_0,candidates_0, [])
-let (unif_result, candidates_result, log_result) = Unify.unify (foo_uni,foo)
+let (seedA, seedB) = initSet start_test_1
+let (unif_0, candidates_0, log_0) = Unify.unify_step (seedA, seedB, [])
+let (unif_1, candidates_1, log_1) = Unify.unify_step (unif_0,candidates_0, log_0)
+let (unif_2, candidates_2, log_2) = Unify.unify_step (unif_1,candidates_1, log_1)
+let (unif_result, candidates_result, log_result) = Unify.unify_step (unif_2,candidates_2, log_2)
 
 let main() = print_string (log_str log_test1);
         print_newline ();
-        print_string (eq_set_str (unif_test1.eqSet));
+        print_string (eq_set_str (unif_0.eqSet));
+        print_string (eq_set_str (unif_1.eqSet));
+        print_string (eq_set_str (unif_2.eqSet));
+        print_string (eq_set_str (unif_result.eqSet));
+        print_newline ();
+        print_string (eq_set_str (candidates_0));
+        print_string (eq_set_str (candidates_1));
+        print_string (eq_set_str (candidates_2));
+        print_string (eq_set_str (candidates_result));
         print_newline ();;
 (* "Pretty" print the EqSet elements *)
 (* List.fold_left (fun x y -> x ^ y) "" (List.map Unifier.str (EqSet.elements foo)) *)

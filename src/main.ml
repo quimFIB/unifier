@@ -18,11 +18,10 @@ let g_of_h_of_z_k = Term.(`Term ("g", [h_of_z; constK]))
 let h_of_yk = Term.(`Term ("h", [`Var "y"; constK]))
 let f_of_g_of_yk = Term.(`Term ("f", [g_of_h_of_z_k]))
 
-let initSet (s : EqSet.t) = (UniSet.from_set s, s)
 
 let eq1_test1 = Unifier.Equal (f_of_g_of_cx, f_of_g_of_yk)
 let start_test_1 = EqSet.(empty |> add eq1_test1)
-let (unif_test1, candidates_test1, log_test1) = Unify.unify (initSet start_test_1)
+let (unif_test1, candidates_test1, log_test1) = Unify.unify start_test_1
 
 let eq_set_str (s : EqSet.t) = let representation = List.fold_left (fun x y -> x ^ y) "" (List.map (fun x -> (Unifier.str x) ^ ";") (EqSet.elements s)) in
                                 if String.length representation > 0 then "{" ^ (String.sub representation 0 ((String.length representation)-1)) ^ "}"
@@ -44,7 +43,7 @@ let foo_uni = UniSet.from_set foo
 let show_unif (unif : UniSet.t) = EqSet.elements unif.eqSet
 let show_candidates (candidates : EqSet.t ) = EqSet.elements candidates
 
-let (seedA, seedB) = initSet start_test_1
+let (seedA, seedB) = Unify.initSet start_test_1
 let (unif_0, candidates_0, log_0) = Unify.unify_step (seedA, seedB, [])
 let (unif_1, candidates_1, log_1) = Unify.unify_step (unif_0,candidates_0, log_0)
 let (unif_2, candidates_2, log_2) = Unify.unify_step (unif_1,candidates_1, log_1)

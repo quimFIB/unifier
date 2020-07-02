@@ -130,6 +130,7 @@ module Unify =
                                                                           | `Var x, `Term (f, l) -> Unifier.occurs (`Var x) t2
                                                                           | _, _ -> false
     let conflict (eq : Unifier.equality) = match eq with Equal (t1,t2) -> Unifier.conflict t1 t2
+    let initSet (s : EqSet.t) = (UniSet.from_set s, s)
     let unify_step ((set, candidates, log) : UniSet.t * EqSet.t * log list) = let eq0 = EqSet.choose candidates in
                                                      match eq0 with
                                                        Equal (t1,t2) -> match t1, t2 with
@@ -151,7 +152,11 @@ module Unify =
                                                                                  else (UniSet.empty, EqSet.empty, List.cons (Log (Fail, eq0, Term2Term)) log)
     let rec unify_loop ((set, candidates, log) : UniSet.t * EqSet.t * log list)  = if EqSet.is_empty candidates then (set, candidates, log)
                                                                                   else unify_loop(unify_step (set,candidates,log))
-    let unify ((set, candidates) : UniSet.t * EqSet.t) = unify_loop (set, candidates, [])
+    let unify (eqs_to_be_unified : EqSet.t) = let (set,candidates) = initSet eqs_to_be_unified in unify_loop (set, candidates, [])
+    let rec unify_loop_logger ((set, candidates, log, set_list, candidates_list) : UniSet.t * EqSet.t * log list * UniSet.t list * EqSet.t list)
+      = if EqSet.is_empty candidates then (set, candidates, log, set_list, candidates_list)
+        else let (set_step, candidates_step, log_step) = unify_step (set,candidates,log) in unify_loop_logger(set_step, candidates_step, log_step, List.cons set_step set_list, List.cons candidates_step candidates_list)
+    let unify_logger (eqs_to_be_unified : EqSet.t) = let (set,candidates) = initSet eqs_to_be_unified in unify_loop_logger(set,candidates,[],[],[])
   end
 
 (* let pretty_print t = List.fold_left (fun x y -> x ^ y) "" (List.map (fun x -> (Unifier.str x) ^ ";") (EqSet.elements t)) *)

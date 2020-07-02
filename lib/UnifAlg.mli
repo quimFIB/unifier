@@ -163,6 +163,7 @@ module EqSet :
     val to_seq : t -> elt Seq.t
     val add_seq : elt Seq.t -> t -> t
     val of_seq : elt Seq.t -> t
+    val substitute : Unifier.equality -> t -> t
   end
 module UniSet :
   sig
@@ -197,9 +198,10 @@ module Unify :
     val eliminate : Unifier.equality -> EqSet.t -> EqSet.t
     val occurs_rec : Unifier.equality -> bool
     val conflict : Unifier.equality -> bool
+    val initSet : EqSet.t -> UniSet.t * EqSet.t
     val unify_step :
       UniSet.t * EqSet.t * log list -> UniSet.t * EqSet.t * log list
     val unify_loop :
       UniSet.t * EqSet.t * log list -> UniSet.t * EqSet.t * log list
-    val unify : UniSet.t * EqSet.t -> UniSet.t * EqSet.t * log list
+    val unify : EqSet.t -> UniSet.t * EqSet.t * log list
   end

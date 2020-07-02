@@ -204,4 +204,9 @@ module Unify :
     val unify_loop :
       UniSet.t * EqSet.t * log list -> UniSet.t * EqSet.t * log list
     val unify : EqSet.t -> UniSet.t * EqSet.t * log list
+    val unify_loop_logger :
+      UniSet.t * EqSet.t * log list * UniSet.t list * EqSet.t list ->
+      UniSet.t * EqSet.t * log list * UniSet.t list * EqSet.t list
+    val unify_logger :
+      EqSet.t -> UniSet.t * EqSet.t * log list * UniSet.t list * EqSet.t list
   end

@@ -140,7 +140,7 @@ module Unify =
                                                                         | `Var x, `Term (f, l)  -> let contains = UniSet.contains (`Var x) set
                                                                                                    and occurs = (Unifier.occurs (`Var x) (`Term (f, l))) in
                                                                             if  contains && not occurs then let subs_set = UniSet.substitute eq0 (UniSet.remove eq0 set) in
-                                                                                                            (UniSet.add eq0 subs_set, EqSet.remove eq0 candidates, List.cons (Log (Eliminate, eq0, Var2Term)) log)
+                                                                                                            (UniSet.add eq0 subs_set, EqSet.substitute eq0 (EqSet.remove eq0 candidates), List.cons (Log (Eliminate, eq0, Var2Term)) log)
                                                                             else if not contains then (set, EqSet.remove eq0 candidates, List.cons (Log (Del, eq0, Var2Term)) log)
                                                                             else (UniSet.empty, EqSet.empty, List.cons (Log (Fail, eq0, Var2Term)) log)
                                                                         | _,_ -> if t1 = t2 then (UniSet.remove eq0 set, EqSet.remove eq0 candidates, List.cons (Log (Del, eq0, Term2Term)) log) (* Delete rule *)

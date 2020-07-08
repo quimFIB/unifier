@@ -3,6 +3,7 @@ module Var :
     type var = [ `Var of string ]
     type t = var
     val compare : var -> var -> int
+    val str : var -> string
   end
 module Term :
   sig
@@ -10,6 +11,29 @@ module Term :
     type t = term
     val compare : term -> term -> int
     val str : term -> string
+  end
+module Atomic :
+  sig
+    type atom = [ `Atom of string * Term.term list ]
+    val str : atom -> string
+  end
+module Literal :
+  sig
+    type literal = [ `Atom of string * Term.term list | `Not of Atomic.atom ]
+    val str : literal -> string
+  end
+module Proposition :
+  sig
+    type t =
+        [ `And of t * t
+        | `Atom of string * Term.term list
+        | `Bottom
+        | `Exists of Var.var * t
+        | `Forall of Var.var * t
+        | `Not of t
+        | `Or of t * t
+        | `Top ]
+    val str : t -> string
   end
 module VarMSet :
   sig

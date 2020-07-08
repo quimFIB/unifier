@@ -53,6 +53,9 @@ let (unif_2, candidates_2, log_2) = Unify.unify_step (unif_1,candidates_1, log_1
 let (unif_result, candidates_result, log_result) = Unify.unify_step (unif_2,candidates_2, log_2)
 
 let (s,c,l,sets,candidates) = Unify.unify_logger start_test_1
+let var_eps = `Var "ε"
+let var_del = `Var "δ"
+let my_formula = `Forall (var_eps, `Exists (var_del, `Or (`Not (`Atom ("LT", [var_del])), `Atom("LT", [var_eps]))))
 
 let main() = print_string (log_str log_test1);
         print_newline ();
@@ -62,6 +65,8 @@ let main() = print_string (log_str log_test1);
         print_string (eq_set_str (unif_result.eqSet));
         print_newline ();
         print_string (eqSet_list_str candidates);
+        print_newline ();
+        print_string (Proposition.str my_formula);
         (* print_string (eq_set_str (candidates_0));
          * print_string (eq_set_str (candidates_1));
          * print_string (eq_set_str (candidates_2));
